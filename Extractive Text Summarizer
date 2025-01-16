@@ -1,0 +1,40 @@
+import re
+import nltk
+from nltk.corpus import stopwords
+#nltk.download ('stopwords')
+all_words=stopwords.words('english')
+all_words.remove('not')
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+#text=('''the economy of India is a developing mixed economy with a notable public sector in strategic sectors.[5] It is the world's fifth-largest economy by nominal GDP and the third-largest by purchasing power parity (PPP); on a per capita income basis, India ranked 136th by GDP (nominal) and 125th by GDP (PPP).[59] From independence in 1947 until 1991, successive governments followed the Soviet model and promoted protectionist economic policies, with extensive Sovietization, state intervention, demand-side economics, natural resources, bureaucrat driven enterprises and economic regulation. This is characterised as dirigism, in the form of the Licence Raj.[60][61] The end of the Cold War and an acute balance of payments crisis in 1991 led to the adoption of a broad economic liberalisation in India and indicative planning.[62][63] Since the start of the 21st century, annual average GDP growth has been 6% to 7%.,[5] India has about 1,900 public sector companies,[64] Indian state has complete control and ownership of railways, highways; majority control and stake in banking,[65] insurance,[66] farming,[67] dairy, fertilizers & chemicals,[68] airports,[69] nuclear, mining, digitization, defense, steel, rare earths, water, electricity, oil and gas industries and power plants,[70] and has substantial control over digitalization, Broadband as national infrastructure, telecommunication, supercomputing, space, port and shipping industries,[71] among other industries, were effectively nationalised in the mid-1950s.''')
+text=('''
+
+      ''')
+sentences=nltk.sent_tokenize(text)
+
+
+waste=[]
+preprocessed_sentences=[]
+for sentence in sentences:
+  corpus=[]
+  tokens=nltk.word_tokenize(sentence)
+  for token in tokens:
+        token=token.lower()
+        token=re.sub('[^a-zA-Z0-9]', " ", token)
+        token=re.sub('ing$|ly$|es$','',token)
+        if token in all_words:
+          waste.append(token)
+        else:
+          corpus.append(token)
+
+  preprocessed_sentences.append(" ".join(corpus))
+
+import numpy as np
+
+vectorizer=TfidfVectorizer()
+sentence_vec=vectorizer.fit_transform(preprocessed_sentences)
+sentence_score=sentence_vec.sum(axis=1).A1
+ranked_indices = np.argsort(sentence_score)[-3:]
+ranked_sentences = [preprocessed_sentences[i] for i in ranked_indices] #this line was given chatgpt
+
+summary = ' ********* \n  '.join(ranked_sentences)
