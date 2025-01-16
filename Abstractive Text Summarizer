@@ -1,0 +1,62 @@
+#ABSTRACTIVE SUMMARIZER USING BERT
+
+import numpy as np
+import tensorflow as tf
+from transformers import TFAutoModel, AutoTokenizer
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import normalize
+import nltk
+nltk.download('punkt')
+from nltk import sent_tokenize
+
+#tokenization
+def preprocess(text):
+    sentences = sent_tokenize(text)
+    return sentences
+
+# Load BERT model and tokenizer
+tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')#doesnt matter if token is upper/lowercase
+model = TFAutoModel.from_pretrained('bert-base-uncased')
+
+# Get BERT embeddings for a single sentence
+def get_sentence_embedding(sentence):
+    inputs = tokenizer(sentence, return_tensors='tf', truncation=True, padding=True)  #padding-> bert requires even length of input  truncation-> wont allow tokens>512
+    outputs = model(inputs)# word2vec
+    sentence_embedding = outputs.last_hidden_state[:, 0, :].numpy()#
+    return sentence_embedding
+
+# Function to get embeddings for multiple sentences
+def get_sentence_embeddings(sentences):  #gets embedding of each token but why when above code?
+    embeddings = []
+    for sentence in sentences:
+        embedding = get_sentence_embedding(sentence)
+        embeddings.append(embedding)
+    return np.vstack(embeddings)
+
+#Ranking sentences based on similarity to the document embedding
+def rank_sentences(sentences, sentence_embeddings):
+    doc_embedding = np.mean(sentence_embeddings, axis=0)  #average of all embeddings
+    doc_embedding = normalize([doc_embedding])  #for cosine
+    sentence_embeddings = normalize(sentence_embeddings)
+    scores = cosine_similarity(doc_embedding, sentence_embeddings) #cosine similarity
+    ranked_sentences = [(sentences[i], scores[0][i]) for i in range(len(sentences))]
+    ranked_sentences = sorted(ranked_sentences, key=lambda x: x[1], reverse=True)
+    return ranked_sentences
+
+#picking the top_k sentences which are most relevant
+def summarize(text, top_k=3):
+    sentences = preprocess(text)
+    sentence_embeddings = get_sentence_embeddings(sentences)
+    ranked_sentences = rank_sentences(sentences, sentence_embeddings)
+    top_sentences = [sent[0] for sent in ranked_sentences[:top_k]]
+    summary = ' '.join(top_sentences)
+    return summary
+
+#Input
+text = """
+        Students often struggle with organizing and retaining vast amounts of information from their study materials. Manually creating summaries, and crafting practice questions is time-consuming, leaving students with less time for actual learning.
+Our Solution: We aim to solve this by automating these processes—using NLP to summarize notes, generate questions from the content, and build a question bank. This empowers students to focus on learning and revising efficiently, reducing the workload.
+          """
+
+summary = summarize(text, top_k=2)
+print("Summary:\n", summary)
